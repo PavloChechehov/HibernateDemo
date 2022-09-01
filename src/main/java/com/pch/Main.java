@@ -1,6 +1,7 @@
 package com.pch;
 
 import com.pch.model.Person;
+import com.pch.orm.Orm;
 import org.postgresql.ds.PGSimpleDataSource;
 
 
@@ -9,16 +10,9 @@ public class Main {
     public static void main(String[] args) {
 
         var orm = buildOrm();
-
-        Person person = orm.find(Person.class, 1);
-        Person theSame = orm.find(Person.class, 1);
-
-        System.out.println(person);
-        System.out.println(person == theSame);
-
-
-        person.setFirstName("Pavlo");
-
+        var person = orm.find(Person.class, 9);
+        person.setFirstName("newnewnew pavlo3");
+        person.setLastName("chec3");
         orm.close();
     }
 
@@ -26,7 +20,7 @@ public class Main {
         var dataSource = new PGSimpleDataSource();
         dataSource.setUser("postgres");
         dataSource.setURL("jdbc:postgresql://localhost:5432/person-db");
-        dataSource.setPassword("");
+        dataSource.setPassword("earTy8vd");
         return new Orm(dataSource);
     }
 
