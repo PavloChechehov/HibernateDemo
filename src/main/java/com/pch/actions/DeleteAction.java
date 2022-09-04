@@ -3,6 +3,7 @@ package com.pch.actions;
 import com.pch.annotation.Id;
 import com.pch.annotation.Table;
 import com.pch.exceptions.ActionException;
+import com.pch.orm.Orm;
 import com.pch.transaction.Transaction;
 import com.pch.transaction.TransactionManager;
 
@@ -16,7 +17,7 @@ public class DeleteAction<T> implements Action {
     public static final String QUERY = "DELETE FROM %s WHERE id = ?";
     private final Field idField;
 
-    public DeleteAction(T entity) {
+    public DeleteAction(T entity, Orm orm) {
         this.entity = entity;
         this.idField = getIdField(entity.getClass().getDeclaredFields());
     }
@@ -33,7 +34,6 @@ public class DeleteAction<T> implements Action {
     public void perform(DataSource dataSource) {
 
         String query = buildQuery();
-        var transaction = TransactionManager.getTransaction();
 
         System.out.println(query);
         transaction.run(query, dataSource, statement -> {
@@ -58,5 +58,10 @@ public class DeleteAction<T> implements Action {
     public String buildQuery() {
         var tableName = entity.getClass().getAnnotation(Table.class).name();
         return QUERY.formatted(tableName);
+    }
+
+    @Override
+    public T getEntity() {
+        return entity;
     }
 }

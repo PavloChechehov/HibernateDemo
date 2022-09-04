@@ -4,6 +4,7 @@ import com.pch.annotation.Column;
 import com.pch.annotation.Id;
 import com.pch.annotation.Table;
 import com.pch.exceptions.ActionException;
+import com.pch.orm.Orm;
 import com.pch.transaction.TransactionManager;
 import lombok.SneakyThrows;
 
@@ -17,7 +18,7 @@ public class UpdateAction<T> implements Action {
     public static final String UPDATE_QUERY = "UPDATE %s set %s WHERE id = %s";
     private final List<Object> fieldValues = new ArrayList<>();
 
-    public UpdateAction(T entity) {
+    public UpdateAction(T entity, Orm orm) {
         this.entity = entity;
     }
 
@@ -73,6 +74,11 @@ public class UpdateAction<T> implements Action {
         }
 
         return String.format(UPDATE_QUERY, tableName, combine, id);
+    }
+
+    @Override
+        public T getEntity() {
+        return entity;
     }
 
 

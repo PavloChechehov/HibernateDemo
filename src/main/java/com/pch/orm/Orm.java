@@ -8,6 +8,8 @@ import com.pch.annotation.Column;
 import com.pch.annotation.Id;
 import com.pch.annotation.Table;
 import com.pch.model.EntityKey;
+import com.pch.transaction.Transaction;
+import com.pch.transaction.TransactionManager;
 import lombok.SneakyThrows;
 
 import javax.sql.DataSource;
@@ -37,10 +39,12 @@ public class Orm implements OrmManager {
     public static Map<EntityKey<?>, Object> entitiesMap = new HashMap<>();
     public static Map<EntityKey<?>, Object[]> entitySnapshots = new HashMap<>();
     private final ActionQueue actionQueue;
+    private TransactionManager transactionManager;
 
     public Orm(DataSource dataSource) {
         this.dataSource = dataSource;
         this.actionQueue = new ActionQueue(dataSource);
+        this.transactionManager =  TransactionManager.of(dataSource);
     }
 
     @SneakyThrows
@@ -55,34 +59,25 @@ public class Orm implements OrmManager {
 
     @SneakyThrows
     public <T> void update(T entity) {
-        var updateAction = new UpdateAction<>(entity);
+        var updateAction = new UpdateAction<>(entity, this);
         actionQueue.put(updateAction);
     }
 
     @Override
     public <T> void persist(T entity) {
-        var insertAction = new InsertAction<>(entity);
+        var insertAction = new InsertAction<>(entity, this);
         actionQueue.put(insertAction);
     }
 
     @Override
     public <T> void remove(T entity) {
-        var deleteAction = new DeleteAction<>(entity);
+        var deleteAction = new DeleteAction<>(entity, this);
         actionQueue.put(deleteAction);
     }
 
     @Override
     public void flush() {
         actionQueue.performActions();
-    }
-
-    private String getFieldName(Field field) {
-        if (field.isAnnotationPresent(Column.class)) {
-            var annotation = field.getAnnotation(Column.class);
-            return annotation.name();
-        } else {
-            return field.getName();
-        }
     }
 
     @SneakyThrows
@@ -178,7 +173,7 @@ public class Orm implements OrmManager {
     }
 
     private void performUpdate(Map.Entry<EntityKey<?>, Object> entityEntry) {
-        var updateAction = new UpdateAction<>(entityEntry.getValue());
+        var updateAction = new UpdateAction<>(entityEntry.getValue(), this);
         updateAction.perform(dataSource);
     }
 
@@ -205,5 +200,10 @@ public class Orm implements OrmManager {
         }
 
         return false;
+    }
+
+    public <T> void addEntity(T entity, Object id) {
+        EntityKey<?> entityKey = new EntityKey<>(entity.getClass(), id);
+        Orm.entitiesMap.put(entityKey, entity);
     }
 }

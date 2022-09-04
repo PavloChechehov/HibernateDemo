@@ -10,6 +10,12 @@ import java.util.function.Function;
 
 public class Transaction {
 
+    private DataSource dataSource;
+
+    public Transaction(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
     @SneakyThrows
     public  <T> T run(String query, DataSource dataSource, Function<PreparedStatement, T> function) {
         T t;
