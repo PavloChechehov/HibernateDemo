@@ -3,7 +3,7 @@ package com.pch.actions;
 import com.pch.annotation.Id;
 import com.pch.annotation.Table;
 import com.pch.exceptions.ActionException;
-import com.pch.transaction.Transaction;
+import com.pch.orm.Orm;
 import com.pch.transaction.TransactionManager;
 
 import javax.sql.DataSource;
@@ -12,13 +12,16 @@ import java.util.Arrays;
 
 public class DeleteAction<T> implements Action {
 
+    private static final Integer ORDER = 3;
     private final T entity;
     public static final String QUERY = "DELETE FROM %s WHERE id = ?";
     private final Field idField;
+    private Orm orm;
 
-    public DeleteAction(T entity) {
+    public DeleteAction(T entity, Orm orm) {
         this.entity = entity;
         this.idField = getIdField(entity.getClass().getDeclaredFields());
+        this.orm = orm;
     }
 
     private Field getIdField(Field[] fields) {
@@ -30,12 +33,14 @@ public class DeleteAction<T> implements Action {
     }
 
     @Override
-    public void perform(DataSource dataSource) {
+    public void perform() {
 
         String query = buildQuery();
         var transaction = TransactionManager.getTransaction();
 
         System.out.println(query);
+        DataSource dataSource = orm.getDataSource();
+
         transaction.run(query, dataSource, statement -> {
 
             try {
@@ -58,5 +63,10 @@ public class DeleteAction<T> implements Action {
     public String buildQuery() {
         var tableName = entity.getClass().getAnnotation(Table.class).name();
         return QUERY.formatted(tableName);
+    }
+
+    @Override
+    public Integer ordering() {
+        return ORDER;
     }
 }

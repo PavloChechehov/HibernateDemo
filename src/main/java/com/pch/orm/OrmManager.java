@@ -1,5 +1,7 @@
 package com.pch.orm;
 
+import javax.sql.DataSource;
+
 public interface OrmManager {
 
     <T> T find(Class<T> type, Integer id);
@@ -13,5 +15,8 @@ public interface OrmManager {
     void flush();
 
     void close();
+
+
+    DataSource getDataSource();
 
 }

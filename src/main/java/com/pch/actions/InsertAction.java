@@ -18,11 +18,14 @@ public class InsertAction<T> implements Action {
 
     private final T entity;
     public static final String QUERY = "INSERT INTO %s(%s) values(%s)";
+    private static final Integer ORDER = 1;
     private final List<Field> columnFields;
+    private Orm orm;
 
-    public InsertAction(T entity) {
+    public InsertAction(T entity, Orm orm) {
         this.entity = entity;
         this.columnFields = getColumnFields(entity.getClass().getDeclaredFields());
+        this.orm = orm;
     }
 
     private List<Field> getColumnFields(Field[] fields) {
@@ -33,12 +36,14 @@ public class InsertAction<T> implements Action {
             .toList();
     }
 
-    public void perform(DataSource dataSource) {
+    public void perform() {
 
         var insertQuery = buildQuery();
         var transaction = TransactionManager.getTransaction();
 
         System.out.println(insertQuery);
+        DataSource dataSource = orm.getDataSource();
+
         transaction.run(insertQuery, dataSource, (PreparedStatement statement) -> {
 
             try {
@@ -59,7 +64,7 @@ public class InsertAction<T> implements Action {
                 field.set(entity, id);
 
                 EntityKey<?> entityKey = new EntityKey<>(entity.getClass(), id);
-                Orm.entitiesMap.put(entityKey, entity);
+                orm.entitiesMap.put(entityKey, entity);
 
             } catch (Exception e) {
                 throw new ActionException("Insert exception", e);
@@ -93,5 +98,10 @@ public class InsertAction<T> implements Action {
                 String.join(",", columnFieldNames),
                 combine.toString()
             );
+    }
+
+    @Override
+    public Integer ordering() {
+        return ORDER;
     }
 }

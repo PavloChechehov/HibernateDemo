@@ -6,15 +6,13 @@ import java.util.LinkedList;
 public class ActionQueue {
 
     private final LinkedList<Action> actions = new LinkedList<>();
-    private final DataSource dataSource;
 
-    public ActionQueue(DataSource dataSource) {
-        this.dataSource = dataSource;
+    public ActionQueue() {
     }
 
     public void performActions() {
         for (Action action : actions) {
-            action.perform(dataSource);
+            action.perform();
         }
 
     }

@@ -4,8 +4,10 @@ import javax.sql.DataSource;
 
 public interface Action {
 
-    void perform(DataSource dataSource);
+    void perform();
 
     String buildQuery();
+
+    Integer ordering();
 
 }

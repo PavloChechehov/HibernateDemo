@@ -34,13 +34,13 @@ public class Orm implements OrmManager {
         */
     private final DataSource dataSource;
     private static final String SELECT_FROM_BY_ID = "select * from %s where id = ?";
-    public static Map<EntityKey<?>, Object> entitiesMap = new HashMap<>();
-    public static Map<EntityKey<?>, Object[]> entitySnapshots = new HashMap<>();
+    public Map<EntityKey<?>, Object> entitiesMap = new HashMap<>();
+    public Map<EntityKey<?>, Object[]> entitySnapshots = new HashMap<>();
     private final ActionQueue actionQueue;
 
     public Orm(DataSource dataSource) {
         this.dataSource = dataSource;
-        this.actionQueue = new ActionQueue(dataSource);
+        this.actionQueue = new ActionQueue();
     }
 
     @SneakyThrows
@@ -55,34 +55,25 @@ public class Orm implements OrmManager {
 
     @SneakyThrows
     public <T> void update(T entity) {
-        var updateAction = new UpdateAction<>(entity);
+        var updateAction = new UpdateAction<>(entity, this);
         actionQueue.put(updateAction);
     }
 
     @Override
     public <T> void persist(T entity) {
-        var insertAction = new InsertAction<>(entity);
+        var insertAction = new InsertAction<>(entity, this);
         actionQueue.put(insertAction);
     }
 
     @Override
     public <T> void remove(T entity) {
-        var deleteAction = new DeleteAction<>(entity);
+        var deleteAction = new DeleteAction<>(entity, this);
         actionQueue.put(deleteAction);
     }
 
     @Override
     public void flush() {
         actionQueue.performActions();
-    }
-
-    private String getFieldName(Field field) {
-        if (field.isAnnotationPresent(Column.class)) {
-            var annotation = field.getAnnotation(Column.class);
-            return annotation.name();
-        } else {
-            return field.getName();
-        }
     }
 
     @SneakyThrows
@@ -170,40 +161,10 @@ public class Orm implements OrmManager {
 
     public void close() {
         actionQueue.performActions();
-
-        entitiesMap.entrySet()
-            .stream()
-            .filter(this::isChanged)
-            .forEach(this::performUpdate);
     }
 
-    private void performUpdate(Map.Entry<EntityKey<?>, Object> entityEntry) {
-        var updateAction = new UpdateAction<>(entityEntry.getValue());
-        updateAction.perform(dataSource);
-    }
-
-    @SneakyThrows
-    private boolean isChanged(Map.Entry<EntityKey<?>, Object> entityEntry) {
-
-        //todo: find all fields of object in sorted way
-        //todo: compare with field's value in the entitySnapshots
-        //todo: if something change return true if not return false
-
-        var object = entityEntry.getValue();
-        EntityKey<?> entryKey = entityEntry.getKey();
-        var fieldValues = entitySnapshots.get(entryKey);
-        Class<?> type = entryKey.type();
-
-        var sortedFields = getSortedFields(type);
-
-        for (int i = 0; i < sortedFields.length; i++) {
-            var sortedField = sortedFields[i];
-            sortedField.setAccessible(true);
-            if (!sortedField.get(object).equals(fieldValues[i])) {
-                return true;
-            }
-        }
-
-        return false;
+    @Override
+    public DataSource getDataSource() {
+        return dataSource;
     }
 }
