@@ -12,6 +12,7 @@ import java.util.Arrays;
 
 public class DeleteAction<T> implements Action {
 
+    private static final Integer ORDER = 3;
     private final T entity;
     public static final String QUERY = "DELETE FROM %s WHERE id = ?";
     private final Field idField;
@@ -58,5 +59,10 @@ public class DeleteAction<T> implements Action {
     public String buildQuery() {
         var tableName = entity.getClass().getAnnotation(Table.class).name();
         return QUERY.formatted(tableName);
+    }
+
+    @Override
+    public Integer ordering() {
+        return ORDER;
     }
 }

@@ -8,4 +8,5 @@ public interface Action {
 
     String buildQuery();
 
+    Integer ordering();
 }

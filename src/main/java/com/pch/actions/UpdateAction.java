@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UpdateAction<T> implements Action {
+    private static final Integer ORDER = 2;
     private final T entity;
     public static final String UPDATE_QUERY = "UPDATE %s set %s WHERE id = %s";
     private final List<Object> fieldValues = new ArrayList<>();
@@ -73,6 +74,11 @@ public class UpdateAction<T> implements Action {
         }
 
         return String.format(UPDATE_QUERY, tableName, combine, id);
+    }
+
+    @Override
+    public Integer ordering() {
+        return ORDER;
     }
 
 

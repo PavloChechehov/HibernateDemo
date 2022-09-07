@@ -1,6 +1,7 @@
 package com.pch.actions;
 
 import javax.sql.DataSource;
+import java.util.Comparator;
 import java.util.LinkedList;
 
 public class ActionQueue {
@@ -13,6 +14,8 @@ public class ActionQueue {
     }
 
     public void performActions() {
+        actions.sort(Comparator.comparing(Action::ordering));
+
         for (Action action : actions) {
             action.perform(dataSource);
         }

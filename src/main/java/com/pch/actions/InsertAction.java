@@ -16,6 +16,7 @@ import java.util.List;
 
 public class InsertAction<T> implements Action {
 
+    private static final Integer ORDER = 1;
     private final T entity;
     public static final String QUERY = "INSERT INTO %s(%s) values(%s)";
     private final List<Field> columnFields;
@@ -93,5 +94,10 @@ public class InsertAction<T> implements Action {
                 String.join(",", columnFieldNames),
                 combine.toString()
             );
+    }
+
+    @Override
+    public Integer ordering() {
+        return ORDER;
     }
 }
