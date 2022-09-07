@@ -1,10 +1,13 @@
-package com.pch;
+package com.pch.orm;
 
+import com.pch.actions.ActionQueue;
+import com.pch.actions.DeleteAction;
+import com.pch.actions.InsertAction;
+import com.pch.actions.UpdateAction;
 import com.pch.annotation.Column;
 import com.pch.annotation.Id;
 import com.pch.annotation.Table;
 import com.pch.model.EntityKey;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 
 import javax.sql.DataSource;
@@ -16,9 +19,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
-@RequiredArgsConstructor
-public class Orm {
-
+public class Orm implements OrmManager {
     /*
             create Person entity
             create required annotations to provide info about table/columns
@@ -32,63 +33,47 @@ public class Orm {
             return entity instance
         */
     private final DataSource dataSource;
-    private static final String UPDATE_QUERY = "update persons set %s where id = %d";
     private static final String SELECT_FROM_BY_ID = "select * from %s where id = ?";
-    private Map<EntityKey<?>, Object> entitiesMap = new HashMap<>();
-    private Map<EntityKey<?>, Object[]> entitySnapshots = new HashMap<>();
+    public static Map<EntityKey<?>, Object> entitiesMap = new HashMap<>();
+    public static Map<EntityKey<?>, Object[]> entitySnapshots = new HashMap<>();
+    private final ActionQueue actionQueue;
+
+    public Orm(DataSource dataSource) {
+        this.dataSource = dataSource;
+        this.actionQueue = new ActionQueue(dataSource);
+    }
 
     @SneakyThrows
     public <T> T find(Class<T> type, Integer id) {
         System.out.println("SQL: select * from " + type.getAnnotation(Table.class).name() + " where id = " + id);
 
         var key = new EntityKey<>(type, id);
-
         var entity = entitiesMap.computeIfAbsent(key, this::loadFromDb);
 
         return type.cast(entity);
     }
 
     @SneakyThrows
-    public <T> void update(T t) {
-
-        String updateQuery = createUpdateQuery(t);
-
-        try (var connection = dataSource.getConnection();
-             var statement = connection.createStatement()) {
-            statement.executeUpdate(updateQuery);
-        }
+    public <T> void update(T entity) {
+        var updateAction = new UpdateAction<>(entity);
+        actionQueue.put(updateAction);
     }
 
-    @SneakyThrows
-    //todo: it needs to rewrite this method to be more flexible
-    private <T> String createUpdateQuery(T t) {
+    @Override
+    public <T> void persist(T entity) {
+        var insertAction = new InsertAction<>(entity);
+        actionQueue.put(insertAction);
+    }
 
-        var fields = t.getClass().getDeclaredFields();
+    @Override
+    public <T> void remove(T entity) {
+        var deleteAction = new DeleteAction<>(entity);
+        actionQueue.put(deleteAction);
+    }
 
-        StringBuilder combine = new StringBuilder();
-
-        Number id = null;
-
-        for (int i = 0; i < fields.length; i++) {
-            Field field = fields[i];
-            field.setAccessible(true);
-
-            if (field.isAnnotationPresent(Id.class)) {
-                id = (Number) field.get(t);
-                continue;
-            }
-
-            var fieldValue = field.get(t);
-            var fieldName = getFieldName(field);
-
-            combine.append(fieldName).append(" = ").append("'").append(fieldValue).append("'");
-
-            if (i + 1 != fields.length) {
-                combine.append(", ");
-            }
-        }
-
-        return String.format(UPDATE_QUERY, combine, id);
+    @Override
+    public void flush() {
+        actionQueue.performActions();
     }
 
     private String getFieldName(Field field) {
@@ -184,6 +169,8 @@ public class Orm {
 
 
     public void close() {
+        actionQueue.performActions();
+
         entitiesMap.entrySet()
             .stream()
             .filter(this::isChanged)
@@ -191,7 +178,8 @@ public class Orm {
     }
 
     private void performUpdate(Map.Entry<EntityKey<?>, Object> entityEntry) {
-        update(entityEntry.getValue());
+        var updateAction = new UpdateAction<>(entityEntry.getValue());
+        updateAction.perform(dataSource);
     }
 
     @SneakyThrows
